@@ -159,5 +159,11 @@ public class ConfigUtilsTest {
         
         Assert.assertEquals(expected, p);
     }
+
+    @Test
+    public void ttest_getProperties() throws Exception {
+        Properties properties = ConfigUtils.getProperties();
+        System.out.println(properties);
+    }
     
 }
