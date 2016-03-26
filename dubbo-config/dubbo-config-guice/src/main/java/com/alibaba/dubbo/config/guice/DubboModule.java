@@ -1,6 +1,5 @@
 package com.alibaba.dubbo.config.guice;
 
-import com.alibaba.dubbo.common.utils.ClassHelper;
 import com.alibaba.dubbo.common.utils.CollectionUtils;
 import com.alibaba.dubbo.common.utils.ConfigUtils;
 import com.alibaba.dubbo.config.ApplicationConfig;
@@ -8,6 +7,7 @@ import com.alibaba.dubbo.config.ProtocolConfig;
 import com.alibaba.dubbo.config.ReferenceConfig;
 import com.alibaba.dubbo.config.RegistryConfig;
 import com.google.inject.AbstractModule;
+import com.google.inject.util.Providers;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,9 +35,15 @@ public class DubboModule extends AbstractModule {
 
         // 连接注册中心配置
         String registryAddress = ConfigUtils.getProperty("dubbo.registry.address");
+
+        String isRegister = ConfigUtils.getProperty("dubbo.registry.register");
         RegistryConfig registry = new RegistryConfig();
         registry.setAddress(registryAddress);
+        if (isRegister!=null) {
+            registry.setRegister(Boolean.valueOf(isRegister));
+        }
         applicationConfig.setRegistry(registry);
+        bind(RegistryConfig.class).toInstance(registry);
 
         // 服务提供者协议配置
         ProtocolConfig protocolConfig = new ProtocolConfig();
@@ -53,7 +59,6 @@ public class DubboModule extends AbstractModule {
         }
 
         bind(ApplicationConfig.class).toInstance(applicationConfig);
-        bind(RegistryConfig.class).toInstance(registry);
         bind(ProtocolConfig.class).toInstance(protocolConfig);
 
         try {
@@ -62,6 +67,7 @@ public class DubboModule extends AbstractModule {
             e.printStackTrace();
         }
 
+        bind(DubboConfigs.class).asEagerSingleton();
     }
 
     private void importReferences(RegistryConfig registry) throws ClassNotFoundException {
@@ -84,7 +90,7 @@ public class DubboModule extends AbstractModule {
                     referenceConfig.setInterface(claz.getCanonicalName());
                     referenceConfig.setId(claz.getSimpleName());
                     referenceConfig.setRegistry(registry);
-                    bind(claz).toInstance(referenceConfig.get());
+                    bind(claz).toProvider(Providers.of(referenceConfig.get()));
                 }
             }
         }
@@ -94,8 +100,6 @@ public class DubboModule extends AbstractModule {
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         URL packageURL;
         Set<String> names = new HashSet<String>();
-        ;
-
         String packageName = packName.replace(".", "/");
         packageURL = classLoader.getResource(packageName);
 

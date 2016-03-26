@@ -13,10 +13,9 @@ public class DubboTestModule extends AbstractModule {
     protected void configure() {
 
         DubboConfigs.addReferenceSubPackageScan("com.alibaba.dubbo.config.guice.api2");
+        DubboConfigs.addServiceSubPackageScan("com.alibaba.dubbo.config.guice.api");
         install(new DubboModule());
         bind(DemoService.class).to(DemoServiceImpl.class).asEagerSingleton();
-        DubboConfigs.addServiceSubPackageScan("com.alibaba.dubbo.config.guice.api");
-        bind(DubboConfigs.class).asEagerSingleton();
     }
 
     public static void main(String[] args) {
