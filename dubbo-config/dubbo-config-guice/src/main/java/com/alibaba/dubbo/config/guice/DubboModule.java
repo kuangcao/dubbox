@@ -97,9 +97,7 @@ public class DubboModule extends AbstractModule {
                     referenceConfig.setVersion(entry.getValue());
                     if (registry.isRegister()) {
                         referenceConfig.setRegistry(registry);
-                        Object object = referenceConfig.get();
-                        bind(claz).toInstance(object);
-//                        bind(claz).toProvider(Providers.of(referenceConfig.get()));
+                        bind(claz).toProvider(Providers.of(referenceConfig.get()));
                     } else {
                         //TODO: 打印告警,告知某些引用未注册
                     }
