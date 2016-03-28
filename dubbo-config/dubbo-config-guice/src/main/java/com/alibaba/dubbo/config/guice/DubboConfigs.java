@@ -7,16 +7,14 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class DubboConfigs {
 
 
     private static Set<String> serviceSubPackages = new HashSet<String>();
-    private static Set<String> referenceSubPackages = new HashSet<String>();
+    private static Map<String, String> referenceSubPackageMap = new HashMap<String, String>(1);
+    private static Set<Class> referenceExcludeClass = new HashSet<Class>(1);
 
     private ApplicationConfig applicationConfig;
     private RegistryConfig registryConfig;
@@ -32,12 +30,24 @@ public class DubboConfigs {
         serviceSubPackages.add(subPackage);
     }
 
-    public static void addReferenceSubPackageScan(final String subPackage) {
-        referenceSubPackages.add(subPackage);
+    public static void addReferenceSubPackageScan(final String subPackage, final String version) {
+        referenceSubPackageMap.put(subPackage, version);
     }
 
-    public static Set<String> getReferenceSubPackages() {
-        return Collections.unmodifiableSet(referenceSubPackages);
+    public static void addReferenceExcludeClass(final Class excludeClass) {
+        referenceExcludeClass.add(excludeClass);
+    }
+
+    public static Set<Class> getReferenceExcludeClasses() {
+        return Collections.unmodifiableSet(referenceExcludeClass);
+    }
+
+    /**
+     * key is class, value is version
+     * @return
+     */
+    public static Map<String, String> getReferenceSubPackages() {
+        return Collections.unmodifiableMap(referenceSubPackageMap);
     }
 
     @Inject
@@ -60,7 +70,9 @@ public class DubboConfigs {
                 if (serviceSubPackages.contains(binding.getKey().getTypeLiteral().getRawType().getPackage().getName())) {
                     ServiceConfig serviceConfig = new ServiceConfig();
                     serviceConfig.setApplication(applicationConfig);
-                    serviceConfig.setRegistry(registryConfig); // 多个注册中心可以用setRegistries()
+                    if (registryConfig.isRegister()) {
+                        serviceConfig.setRegistry(registryConfig); // 多个注册中心可以用setRegistries()
+                    }
                     serviceConfig.setProtocol(protocolConfig);
                     serviceConfig.setInterface(binding.getKey().getTypeLiteral().getRawType().getCanonicalName());
                     serviceConfig.setRef(injector.getInstance(binding.getKey().getTypeLiteral().getRawType()));

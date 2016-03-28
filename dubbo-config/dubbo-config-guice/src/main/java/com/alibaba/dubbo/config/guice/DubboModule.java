@@ -17,6 +17,7 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.util.Enumeration;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -41,9 +42,12 @@ public class DubboModule extends AbstractModule {
         registry.setAddress(registryAddress);
         if (isRegister!=null) {
             registry.setRegister(Boolean.valueOf(isRegister));
+        } else {
+            registry.setRegister(true);
         }
-        applicationConfig.setRegistry(registry);
-        bind(RegistryConfig.class).toInstance(registry);
+        if (registry.isRegister()) {
+            applicationConfig.setRegistry(registry);
+        }
 
         // 服务提供者协议配置
         ProtocolConfig protocolConfig = new ProtocolConfig();
@@ -59,6 +63,7 @@ public class DubboModule extends AbstractModule {
         }
 
         bind(ApplicationConfig.class).toInstance(applicationConfig);
+        bind(RegistryConfig.class).toInstance(registry);
         bind(ProtocolConfig.class).toInstance(protocolConfig);
 
         try {
@@ -71,26 +76,33 @@ public class DubboModule extends AbstractModule {
     }
 
     private void importReferences(RegistryConfig registry) throws ClassNotFoundException {
-        Set<String> referenceSubPackages = DubboConfigs.getReferenceSubPackages();
-        if (CollectionUtils.isEmpty(referenceSubPackages)) {
+        Map<String, String> referenceSubPackages = DubboConfigs.getReferenceSubPackages();
+        if (referenceSubPackages.size() == 0) {
             return;
         }
-        for (String subPackage : referenceSubPackages) {
+        for (Map.Entry<String, String> entry : referenceSubPackages.entrySet()) {
             Set<String> classNames = null;
             try {
-                classNames = getClassNamesFromPackage(subPackage);
+                classNames = getClassNamesFromPackage(entry.getKey());
             } catch (Exception e) {
                 e.printStackTrace();
             }
 
             for (String className : classNames) {
                 Class claz = Class.forName(className);
-                if (claz.isInterface()) {
+                if (claz.isInterface() && !DubboConfigs.getReferenceExcludeClasses().contains(claz)) {
                     ReferenceConfig referenceConfig = new ReferenceConfig();
                     referenceConfig.setInterface(claz.getCanonicalName());
                     referenceConfig.setId(claz.getSimpleName());
-                    referenceConfig.setRegistry(registry);
-                    bind(claz).toProvider(Providers.of(referenceConfig.get()));
+                    referenceConfig.setVersion(entry.getValue());
+                    if (registry.isRegister()) {
+                        referenceConfig.setRegistry(registry);
+                        Object object = referenceConfig.get();
+                        bind(claz).toInstance(object);
+//                        bind(claz).toProvider(Providers.of(referenceConfig.get()));
+                    } else {
+                        //TODO: 打印告警,告知某些引用未注册
+                    }
                 }
             }
         }
