@@ -1,6 +1,5 @@
 package com.alibaba.dubbo.config.guice;
 
-import com.alibaba.dubbo.common.utils.CollectionUtils;
 import com.alibaba.dubbo.common.utils.ConfigUtils;
 import com.alibaba.dubbo.config.ApplicationConfig;
 import com.alibaba.dubbo.config.ProtocolConfig;
@@ -15,10 +14,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLDecoder;
-import java.util.Enumeration;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -36,16 +32,20 @@ public class DubboModule extends AbstractModule {
 
         // 连接注册中心配置
         String registryAddress = ConfigUtils.getProperty("dubbo.registry.address");
-
         String isRegister = ConfigUtils.getProperty("dubbo.registry.register");
-        RegistryConfig registry = new RegistryConfig();
-        registry.setAddress(registryAddress);
-        if (isRegister!=null) {
-            registry.setRegister(Boolean.valueOf(isRegister));
+        if (RegistryConfig.NO_AVAILABLE.equalsIgnoreCase(registryAddress)) {
+            RegistryConfig registry = getRegistryConfig(isRegister, RegistryConfig.NO_AVAILABLE);
+            applicationConfig.setRegistry(registry);
+        } else if (registryAddress.indexOf(',') != -1) {
+            String[] values = registryAddress.split("\\s*[,]+\\s*");
+            List<RegistryConfig> registryConfigs = new ArrayList<RegistryConfig>();
+            for (int i = 0; i < values.length; i++) {
+                RegistryConfig registry = getRegistryConfig(isRegister, values[i]);
+                registryConfigs.add(registry);
+            }
+            applicationConfig.setRegistries(registryConfigs);
         } else {
-            registry.setRegister(true);
-        }
-        if (registry.isRegister()) {
+            RegistryConfig registry = getRegistryConfig(isRegister, RegistryConfig.NO_AVAILABLE);
             applicationConfig.setRegistry(registry);
         }
 
@@ -63,11 +63,10 @@ public class DubboModule extends AbstractModule {
         }
 
         bind(ApplicationConfig.class).toInstance(applicationConfig);
-        bind(RegistryConfig.class).toInstance(registry);
         bind(ProtocolConfig.class).toInstance(protocolConfig);
 
         try {
-            importReferences(registry);
+            importReferences(applicationConfig);
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
@@ -75,7 +74,14 @@ public class DubboModule extends AbstractModule {
         bind(DubboConfigs.class).asEagerSingleton();
     }
 
-    private void importReferences(RegistryConfig registry) throws ClassNotFoundException {
+    private RegistryConfig getRegistryConfig(String isRegister, String value) {
+        RegistryConfig registry = new RegistryConfig();
+        registry.setAddress(value);
+        registry.setRegister(isRegister != null ? Boolean.valueOf(isRegister) : true);
+        return registry;
+    }
+
+    private void importReferences(ApplicationConfig applicationConfig) throws ClassNotFoundException {
         Map<String, String> referenceSubPackages = DubboConfigs.getReferenceSubPackages();
         if (referenceSubPackages.size() == 0) {
             return;
@@ -95,11 +101,17 @@ public class DubboModule extends AbstractModule {
                     referenceConfig.setInterface(claz.getCanonicalName());
                     referenceConfig.setId(claz.getSimpleName());
                     referenceConfig.setVersion(entry.getValue());
-                    if (registry.isRegister()) {
-                        referenceConfig.setRegistry(registry);
+                    RegistryConfig registry = applicationConfig.getRegistry();
+                    if (registry != null) {
+                        if (registry.isRegister()) {
+                            referenceConfig.setRegistry(registry);
+                            bind(claz).toProvider(Providers.of(referenceConfig.get()));
+                        } else {
+                            //TODO: 打印告警,告知某些引用未注册
+                        }
+                    } else if (applicationConfig.getRegistries() != null){
+                        referenceConfig.setRegistries(applicationConfig.getRegistries());
                         bind(claz).toProvider(Providers.of(referenceConfig.get()));
-                    } else {
-                        //TODO: 打印告警,告知某些引用未注册
                     }
                 }
             }

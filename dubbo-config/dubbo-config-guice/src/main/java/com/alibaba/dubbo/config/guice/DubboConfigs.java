@@ -17,7 +17,6 @@ public class DubboConfigs {
     private static Set<Class> referenceExcludeClass = new HashSet<Class>(1);
 
     private ApplicationConfig applicationConfig;
-    private RegistryConfig registryConfig;
     private ProtocolConfig protocolConfig;
     private final Injector injector;
 
@@ -51,11 +50,9 @@ public class DubboConfigs {
     }
 
     @Inject
-    public DubboConfigs(Injector injector, ApplicationConfig applicationConfig,
-                        RegistryConfig registryConfig, ProtocolConfig protocolConfig) {
+    public DubboConfigs(Injector injector, ApplicationConfig applicationConfig, ProtocolConfig protocolConfig) {
         this.injector = injector;
         this.applicationConfig = applicationConfig;
-        this.registryConfig = registryConfig;
         this.protocolConfig = protocolConfig;
         exportServices();
     }
@@ -70,9 +67,10 @@ public class DubboConfigs {
                 if (serviceSubPackages.contains(binding.getKey().getTypeLiteral().getRawType().getPackage().getName())) {
                     ServiceConfig serviceConfig = new ServiceConfig();
                     serviceConfig.setApplication(applicationConfig);
-                    if (registryConfig.isRegister()) {
-                        serviceConfig.setRegistry(registryConfig); // 多个注册中心可以用setRegistries()
-                    }
+                    
+                    serviceConfig.setRegistry(applicationConfig.getRegistry());
+                    serviceConfig.setRegistries(applicationConfig.getRegistries());
+
                     serviceConfig.setProtocol(protocolConfig);
                     serviceConfig.setInterface(binding.getKey().getTypeLiteral().getRawType().getCanonicalName());
                     serviceConfig.setRef(injector.getInstance(binding.getKey().getTypeLiteral().getRawType()));
