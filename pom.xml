@@ -49,11 +49,12 @@
 		<module>dubbo-monitor</module>
 		<module>dubbo-config</module>
 		<module>dubbo</module>
+		<module>dubbo-guice</module>
 		<module>dubbo-simple</module>
 		<module>dubbo-admin</module>
 		<module>dubbo-demo</module>
 		<module>hessian-lite</module>
-        <!--<module>dubbo-tool/dubbo-demo-lite-archetype</module>-->
+		<!--<module>dubbo-tool/dubbo-demo-lite-archetype</module>-->
 	</modules>
 	<profiles>
 		<profile>
