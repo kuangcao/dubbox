@@ -6,6 +6,7 @@ import com.alibaba.dubbo.config.ProtocolConfig;
 import com.alibaba.dubbo.config.ReferenceConfig;
 import com.alibaba.dubbo.config.RegistryConfig;
 import com.google.inject.AbstractModule;
+import com.google.inject.multibindings.Multibinder;
 import com.google.inject.util.Providers;
 
 import java.io.File;
@@ -26,6 +27,7 @@ public class DubboModule extends AbstractModule {
 
         // 当前应用配置
         ApplicationConfig applicationConfig = new ApplicationConfig();
+
         applicationConfig.setName(applicationName);
         String applicationVersion = ConfigUtils.getProperty("dubbo.application.version");
         applicationConfig.setVersion(applicationVersion);
@@ -45,33 +47,49 @@ public class DubboModule extends AbstractModule {
             }
             applicationConfig.setRegistries(registryConfigs);
         } else {
-            RegistryConfig registry = getRegistryConfig(isRegister, RegistryConfig.NO_AVAILABLE);
+            RegistryConfig registry = getRegistryConfig(isRegister, registryAddress);
             applicationConfig.setRegistry(registry);
         }
 
         // 服务提供者协议配置
-        ProtocolConfig protocolConfig = new ProtocolConfig();
+        Multibinder<ProtocolConfig> pcBinder = Multibinder.newSetBinder(binder(), ProtocolConfig.class);
+        String protocol = ConfigUtils.getProperty("dubbo.protocol.name");
 
-        String port = ConfigUtils.getProperty("dubbo.protocol.dubbo.port");
-        if (port != null) {
-            protocolConfig.setName("dubbo");
-            protocolConfig.setPort(Integer.getInteger(port));
-            String threads = ConfigUtils.getProperty("dubbo.protocol.dubbo.threads");
-            if (threads != null) {
-                protocolConfig.setThreads(Integer.getInteger(threads));
+        if (protocol == null) {
+            // 默认采用dubbo协议
+            protocol = "dubbo";
+            pcBinder.addBinding().toInstance(getProtocolConfig(protocol));
+        } else if (protocol.indexOf(',') != -1) {
+            String[] protos = protocol.split("\\s*[,]+\\s*");
+            for (String proto : protos) {
+                pcBinder.addBinding().toInstance(getProtocolConfig(proto));
             }
+        } else {
+            pcBinder.addBinding().toInstance(getProtocolConfig(protocol));
         }
 
         bind(ApplicationConfig.class).toInstance(applicationConfig);
-        bind(ProtocolConfig.class).toInstance(protocolConfig);
 
         try {
             importReferences(applicationConfig);
         } catch (ClassNotFoundException e) {
-            e.printStackTrace();
         }
 
         bind(DubboConfigs.class).asEagerSingleton();
+    }
+
+    private ProtocolConfig getProtocolConfig(String protocol) {
+        ProtocolConfig protocolConfig = new ProtocolConfig();
+        protocolConfig.setName(protocol);
+        String port = ConfigUtils.getProperty("dubbo.protocol." + protocol + ".port");
+        if (port != null) {
+            protocolConfig.setPort(Integer.getInteger(port));
+        }
+        String threads = ConfigUtils.getProperty("dubbo.protocol." + protocol + ".threads");
+        if (threads != null) {
+            protocolConfig.setThreads(Integer.getInteger(threads));
+        }
+        return protocolConfig;
     }
 
     private RegistryConfig getRegistryConfig(String isRegister, String value) {
@@ -109,7 +127,7 @@ public class DubboModule extends AbstractModule {
                         } else {
                             //TODO: 打印告警,告知某些引用未注册
                         }
-                    } else if (applicationConfig.getRegistries() != null){
+                    } else if (applicationConfig.getRegistries() != null) {
                         referenceConfig.setRegistries(applicationConfig.getRegistries());
                         bind(claz).toProvider(Providers.of(referenceConfig.get()));
                     }

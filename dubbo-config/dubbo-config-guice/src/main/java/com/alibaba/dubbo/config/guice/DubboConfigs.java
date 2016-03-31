@@ -17,7 +17,7 @@ public class DubboConfigs {
     private static Set<Class> referenceExcludeClass = new HashSet<Class>(1);
 
     private ApplicationConfig applicationConfig;
-    private ProtocolConfig protocolConfig;
+    private Set<ProtocolConfig> protocolConfigs;
     private final Injector injector;
 
     private static Set<ServiceConfig>  serviceConfigs = new HashSet<ServiceConfig>();
@@ -50,10 +50,10 @@ public class DubboConfigs {
     }
 
     @Inject
-    public DubboConfigs(Injector injector, ApplicationConfig applicationConfig, ProtocolConfig protocolConfig) {
+    public DubboConfigs(Injector injector, ApplicationConfig applicationConfig, Set<ProtocolConfig> protocolConfigs) {
         this.injector = injector;
         this.applicationConfig = applicationConfig;
-        this.protocolConfig = protocolConfig;
+        this.protocolConfigs = protocolConfigs;
         exportServices();
     }
 
@@ -67,15 +67,16 @@ public class DubboConfigs {
                 if (serviceSubPackages.contains(binding.getKey().getTypeLiteral().getRawType().getPackage().getName())) {
                     ServiceConfig serviceConfig = new ServiceConfig();
                     serviceConfig.setApplication(applicationConfig);
-                    
+
                     serviceConfig.setRegistry(applicationConfig.getRegistry());
                     serviceConfig.setRegistries(applicationConfig.getRegistries());
 
-                    serviceConfig.setProtocol(protocolConfig);
+                    serviceConfig.setProtocols(new ArrayList<ProtocolConfig>(protocolConfigs));
                     serviceConfig.setInterface(binding.getKey().getTypeLiteral().getRawType().getCanonicalName());
                     serviceConfig.setRef(injector.getInstance(binding.getKey().getTypeLiteral().getRawType()));
                     serviceConfig.setVersion(applicationConfig.getVersion());
                     serviceConfig.export();
+
                     serviceConfigs.add(serviceConfig);
                 }
             }

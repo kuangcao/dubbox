@@ -27,6 +27,10 @@
             <artifactId>guice</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.google.inject.extensions</groupId>
+            <artifactId>guice-multibindings</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>dubbo-registry-default</artifactId>
             <version>${project.parent.version}</version>
@@ -60,6 +64,7 @@
             <groupId>com.alibaba</groupId>
             <artifactId>dubbo-rpc-injvm</artifactId>
             <version>${project.parent.version}</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.alibaba</groupId>

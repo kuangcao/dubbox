@@ -304,6 +304,11 @@
 				<version>${guice_version}</version>
 			</dependency>
 			<dependency>
+				<groupId>com.google.inject.extensions</groupId>
+				<artifactId>guice-multibindings</artifactId>
+				<version>${guice_version}</version>
+			</dependency>
+			<dependency>
 				<groupId>com.alibaba.citrus</groupId>
 				<artifactId>citrus-webx-all</artifactId>
 				<version>${webx_version}</version>
