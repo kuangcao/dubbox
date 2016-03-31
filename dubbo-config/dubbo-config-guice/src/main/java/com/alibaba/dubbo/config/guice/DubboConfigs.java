@@ -67,11 +67,10 @@ public class DubboConfigs {
                 if (serviceSubPackages.contains(binding.getKey().getTypeLiteral().getRawType().getPackage().getName())) {
                     ServiceConfig serviceConfig = new ServiceConfig();
                     serviceConfig.setApplication(applicationConfig);
-
                     serviceConfig.setRegistry(applicationConfig.getRegistry());
                     serviceConfig.setRegistries(applicationConfig.getRegistries());
-
                     serviceConfig.setProtocols(new ArrayList<ProtocolConfig>(protocolConfigs));
+
                     serviceConfig.setInterface(binding.getKey().getTypeLiteral().getRawType().getCanonicalName());
                     serviceConfig.setRef(injector.getInstance(binding.getKey().getTypeLiteral().getRawType()));
                     serviceConfig.setVersion(applicationConfig.getVersion());
