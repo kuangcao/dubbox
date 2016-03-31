@@ -1,10 +1,7 @@
 package com.alibaba.dubbo.config.guice;
 
 import com.alibaba.dubbo.common.utils.ConfigUtils;
-import com.alibaba.dubbo.config.ApplicationConfig;
-import com.alibaba.dubbo.config.ProtocolConfig;
-import com.alibaba.dubbo.config.ReferenceConfig;
-import com.alibaba.dubbo.config.RegistryConfig;
+import com.alibaba.dubbo.config.*;
 import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.util.Providers;
@@ -21,18 +18,77 @@ import java.util.jar.JarFile;
 
 public class DubboModule extends AbstractModule {
 
+    private static Set<String> serviceSubPackages = new HashSet<String>();
+    private static Set<Class> excludeServiceClasses = new HashSet<Class>(1);
+    private static Map<String, String> referenceSubPackageMap = new HashMap<String, String>(1);
+    private static Set<Class> excludeReferenceClasses = new HashSet<Class>(1);
+
+    public static void addServiceSubPackageScan(final String subPackage) {
+        serviceSubPackages.add(subPackage);
+    }
+
+    public static void addExcludeServiceClass(Class clasz) {
+        excludeServiceClasses.add(clasz);
+    }
+
+    public static Set<Class> getExcludeServiceClasses() {
+        return Collections.unmodifiableSet(excludeServiceClasses);
+    }
+
+    public static Set<String> getServiceSubPackages() {
+        return Collections.unmodifiableSet(serviceSubPackages);
+    }
+
+    public static void addReferenceSubPackageScan(final String subPackage, final String version) {
+        referenceSubPackageMap.put(subPackage, version);
+    }
+
+    public static void addExcludeReferenceClass(final Class excludeClass) {
+        excludeReferenceClasses.add(excludeClass);
+    }
+
+    public static Set<Class> getExcludeReferenceClasses() {
+        return Collections.unmodifiableSet(excludeReferenceClasses);
+    }
+
+    /**
+     * key is class, value is version
+     * @return
+     */
+    public static Map<String, String> getReferenceSubPackages() {
+        return Collections.unmodifiableMap(referenceSubPackageMap);
+    }
+
     @Override
     protected void configure() {
         String applicationName = ConfigUtils.getProperty("dubbo.application.name");
 
-        // 当前应用配置
+        // 设置应用配置
         ApplicationConfig applicationConfig = new ApplicationConfig();
-
         applicationConfig.setName(applicationName);
         String applicationVersion = ConfigUtils.getProperty("dubbo.application.version");
         applicationConfig.setVersion(applicationVersion);
 
-        // 连接注册中心配置
+        // 设置监控
+        String monitorProtocol = ConfigUtils.getProperty("dubbo.monitor.protocol");
+        if (monitorProtocol != null) {
+            MonitorConfig monitorConfig = new MonitorConfig();
+            monitorConfig.setProtocol(monitorProtocol);
+            monitorConfig.setAddress(ConfigUtils.getProperty("dubbo.monitor.address"));
+            applicationConfig.setMonitor(monitorConfig);
+        }
+
+        bind(ApplicationConfig.class).toInstance(applicationConfig);
+
+        bindingRegistries(applicationConfig);
+
+        bindingProtocols(applicationConfig);
+
+        bind(DubboConfigs.class).asEagerSingleton();
+    }
+
+
+    private void bindingRegistries(ApplicationConfig applicationConfig) {
         String registryAddress = ConfigUtils.getProperty("dubbo.registry.address");
         String isRegister = ConfigUtils.getProperty("dubbo.registry.register");
         if (RegistryConfig.NO_AVAILABLE.equalsIgnoreCase(registryAddress)) {
@@ -50,7 +106,9 @@ public class DubboModule extends AbstractModule {
             RegistryConfig registry = getRegistryConfig(isRegister, registryAddress);
             applicationConfig.setRegistry(registry);
         }
+    }
 
+    private void bindingProtocols(ApplicationConfig applicationConfig) {
         // 服务提供者协议配置
         Multibinder<ProtocolConfig> pcBinder = Multibinder.newSetBinder(binder(), ProtocolConfig.class);
         String protocol = ConfigUtils.getProperty("dubbo.protocol.name");
@@ -68,14 +126,11 @@ public class DubboModule extends AbstractModule {
             pcBinder.addBinding().toInstance(getProtocolConfig(protocol));
         }
 
-        bind(ApplicationConfig.class).toInstance(applicationConfig);
 
         try {
             importReferences(applicationConfig);
         } catch (ClassNotFoundException e) {
         }
-
-        bind(DubboConfigs.class).asEagerSingleton();
     }
 
     private ProtocolConfig getProtocolConfig(String protocol) {
@@ -100,7 +155,7 @@ public class DubboModule extends AbstractModule {
     }
 
     private void importReferences(ApplicationConfig applicationConfig) throws ClassNotFoundException {
-        Map<String, String> referenceSubPackages = DubboConfigs.getReferenceSubPackages();
+        Map<String, String> referenceSubPackages = getReferenceSubPackages();
         if (referenceSubPackages.size() == 0) {
             return;
         }
@@ -114,22 +169,19 @@ public class DubboModule extends AbstractModule {
 
             for (String className : classNames) {
                 Class claz = Class.forName(className);
-                if (claz.isInterface() && !DubboConfigs.getReferenceExcludeClasses().contains(claz)) {
+                if (claz.isInterface() && ! getExcludeReferenceClasses().contains(claz)) {
                     ReferenceConfig referenceConfig = new ReferenceConfig();
                     referenceConfig.setInterface(claz.getCanonicalName());
                     referenceConfig.setId(claz.getSimpleName());
                     referenceConfig.setVersion(entry.getValue());
-                    RegistryConfig registry = applicationConfig.getRegistry();
-                    if (registry != null) {
-                        if (registry.isRegister()) {
-                            referenceConfig.setRegistry(registry);
-                            bind(claz).toProvider(Providers.of(referenceConfig.get()));
-                        } else {
-                            //TODO: 打印告警,告知某些引用未注册
-                        }
-                    } else if (applicationConfig.getRegistries() != null) {
-                        referenceConfig.setRegistries(applicationConfig.getRegistries());
+                    referenceConfig.setMonitor(applicationConfig.getMonitor());
+                    referenceConfig.setRegistry(applicationConfig.getRegistry());
+                    referenceConfig.setRegistries(applicationConfig.getRegistries());
+                    try {
                         bind(claz).toProvider(Providers.of(referenceConfig.get()));
+                    } catch (Exception e) {
+                        //TODO: log 引用不存在
+                        throw e;
                     }
                 }
             }

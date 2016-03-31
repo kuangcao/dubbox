@@ -11,46 +11,14 @@ import java.util.*;
 
 public class DubboConfigs {
 
-
-    private static Set<String> serviceSubPackages = new HashSet<String>();
-    private static Map<String, String> referenceSubPackageMap = new HashMap<String, String>(1);
-    private static Set<Class> referenceExcludeClass = new HashSet<Class>(1);
-
     private ApplicationConfig applicationConfig;
     private Set<ProtocolConfig> protocolConfigs;
     private final Injector injector;
 
     private static Set<ServiceConfig>  serviceConfigs = new HashSet<ServiceConfig>();
 
-    public static void addServiceSubPackageScan(final String subPackage) {
-        if (serviceSubPackages == null) {
-            serviceSubPackages = new HashSet<String>();
-        }
-        serviceSubPackages.add(subPackage);
-    }
-
-    public static void addReferenceSubPackageScan(final String subPackage, final String version) {
-        referenceSubPackageMap.put(subPackage, version);
-    }
-
-    public static void addReferenceExcludeClass(final Class excludeClass) {
-        referenceExcludeClass.add(excludeClass);
-    }
-
-    public static Set<Class> getReferenceExcludeClasses() {
-        return Collections.unmodifiableSet(referenceExcludeClass);
-    }
-
-    /**
-     * key is class, value is version
-     * @return
-     */
-    public static Map<String, String> getReferenceSubPackages() {
-        return Collections.unmodifiableMap(referenceSubPackageMap);
-    }
-
     @Inject
-    public DubboConfigs(Injector injector, ApplicationConfig applicationConfig, Set<ProtocolConfig> protocolConfigs) {
+    protected DubboConfigs(Injector injector, ApplicationConfig applicationConfig, Set<ProtocolConfig> protocolConfigs) {
         this.injector = injector;
         this.applicationConfig = applicationConfig;
         this.protocolConfigs = protocolConfigs;
@@ -58,17 +26,22 @@ public class DubboConfigs {
     }
 
     private void exportServices() {
+        Set<String> serviceSubPackages = DubboModule.getServiceSubPackages();
+        Set<Class> excludeServiceClasses = DubboModule.getExcludeServiceClasses();
         if (CollectionUtils.isEmpty(serviceSubPackages)) {
             return;
         }
         for (Map.Entry<Key<?>, Binding<?>> binding : injector.getBindings()
                 .entrySet()) {
             if (binding.getKey().getTypeLiteral().getRawType().isInterface()) {
-                if (serviceSubPackages.contains(binding.getKey().getTypeLiteral().getRawType().getPackage().getName())) {
+                if (serviceSubPackages.contains(binding.getKey().getTypeLiteral().getRawType().getPackage().getName())
+                        && !excludeServiceClasses.contains(binding.getKey().getTypeLiteral().getRawType())) {
+
                     ServiceConfig serviceConfig = new ServiceConfig();
                     serviceConfig.setApplication(applicationConfig);
                     serviceConfig.setRegistry(applicationConfig.getRegistry());
                     serviceConfig.setRegistries(applicationConfig.getRegistries());
+                    serviceConfig.setMonitor(applicationConfig.getMonitor());
                     serviceConfig.setProtocols(new ArrayList<ProtocolConfig>(protocolConfigs));
 
                     serviceConfig.setInterface(binding.getKey().getTypeLiteral().getRawType().getCanonicalName());
