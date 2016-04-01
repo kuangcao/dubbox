@@ -187,10 +187,10 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         if (resolve == null || resolve.length() == 0) {
 	        resolveFile = System.getProperty("dubbo.resolve.file");
 	        if (resolveFile == null || resolveFile.length() == 0) {
-	        	File userResolveFile = new File(new File(System.getProperty("user.home")), "dubbo-resolve.properties");
-	        	if (userResolveFile.exists()) {
-	        		resolveFile = userResolveFile.getAbsolutePath();
-	        	}
+                File userResolveFile = new File(new File(System.getProperty("user.home")), "dubbo-resolve.properties");
+                if (userResolveFile.exists()) {
+                    resolveFile = userResolveFile.getAbsolutePath();
+                }
 	        }
 	        if (resolveFile != null && resolveFile.length() > 0) {
 	        	Properties properties = new Properties();

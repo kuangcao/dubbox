@@ -14,9 +14,9 @@ public class DubboClientModule extends AbstractModule {
     @Override
     protected void configure() {
 
-        DubboModule.addReferenceSubPackageScan("com.alibaba.dubbo.config.guice.api", "1.0.0");
-        DubboModule.addExcludeReferenceClass(Box.class);
-        DubboModule.addExcludeReferenceClass(DemoServiceSon.class);
+//        DubboModule.addReferenceSubPackageScan("com.alibaba.dubbo.config.guice.api", "1.0.0");
+//        DubboModule.addExcludeReferenceClass(Box.class);
+//        DubboModule.addExcludeReferenceClass(DemoServiceSon.class);
         install(new DubboModule());
 
     }

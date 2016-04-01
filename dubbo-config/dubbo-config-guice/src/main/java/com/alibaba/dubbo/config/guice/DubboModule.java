@@ -18,6 +18,10 @@ import java.util.jar.JarFile;
 
 public class DubboModule extends AbstractModule {
 
+    public static final String DUBBO_SERVICES_FILE = "dubbo.services.file";
+    public static final String DUBBO_REFERENCES_FILE = "dubbo.references.file";
+    public static final String PACKAGE = "package.";
+    public static final String EXCLUDE_CLASS = "excludeClass.";
     private static Set<String> serviceSubPackages = new HashSet<String>();
     private static Set<Class> excludeServiceClasses = new HashSet<Class>(1);
     private static Map<String, String> referenceSubPackageMap = new HashMap<String, String>(1);
@@ -59,8 +63,67 @@ public class DubboModule extends AbstractModule {
         return Collections.unmodifiableMap(referenceSubPackageMap);
     }
 
+    private static volatile Properties SERVICE_PROPERTIES;
+    private void initServices() {
+        if (SERVICE_PROPERTIES == null) {
+            synchronized (DubboModule.class) {
+                if (SERVICE_PROPERTIES == null) {
+                    String services = System.getProperty(DUBBO_SERVICES_FILE);
+                    if (services == null || services.length() == 0) {
+                        services = "dubbo-services.properties";
+                    }
+                    SERVICE_PROPERTIES = ConfigUtils.loadProperties(services, false, true);
+                }
+            }
+        }
+        if (SERVICE_PROPERTIES == null) {
+            return;
+        }
+        for (String key : SERVICE_PROPERTIES.stringPropertyNames()) {
+            if (key.startsWith(PACKAGE)) {
+                serviceSubPackages.add(SERVICE_PROPERTIES.getProperty(key));
+            } else if (key.startsWith(EXCLUDE_CLASS)) {
+                try {
+                    excludeServiceClasses.add(Class.forName(SERVICE_PROPERTIES.getProperty(key)));
+                } catch (ClassNotFoundException e) {
+                }
+            }
+        }
+    }
+
+
+    private static volatile Properties REFERENCE_PROPERTIES;
+    private void initReferences() {
+        if (REFERENCE_PROPERTIES == null) {
+            synchronized (DubboModule.class) {
+                if (REFERENCE_PROPERTIES == null) {
+                    String services = System.getProperty(DUBBO_REFERENCES_FILE);
+                    if (services == null || services.length() == 0) {
+                        services = "dubbo-references.properties";
+                    }
+                    REFERENCE_PROPERTIES = ConfigUtils.loadProperties(services, false, true);
+                }
+            }
+        }
+        if (REFERENCE_PROPERTIES == null) {
+            return;
+        }
+        for (String key : REFERENCE_PROPERTIES.stringPropertyNames()) {
+            if (key.startsWith(EXCLUDE_CLASS)) {
+                try {
+                    excludeReferenceClasses.add(Class.forName(REFERENCE_PROPERTIES.getProperty(key)));
+                } catch (ClassNotFoundException e) {
+                }
+            } else {
+                referenceSubPackageMap.put(key, REFERENCE_PROPERTIES.getProperty(key));
+            }
+        }
+    }
+
     @Override
     protected void configure() {
+        initServices();
+        initReferences();
         String applicationName = ConfigUtils.getProperty("dubbo.application.name");
 
         // 设置应用配置

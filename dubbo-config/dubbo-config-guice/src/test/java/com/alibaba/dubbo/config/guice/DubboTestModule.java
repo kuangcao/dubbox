@@ -16,8 +16,8 @@ public class DubboTestModule extends AbstractModule {
     @Override
     protected void configure() {
 
-        DubboModule.addServiceSubPackageScan("com.alibaba.dubbo.config.guice.api");
-        DubboModule.addExcludeServiceClass(DemoServiceSon.class);
+//        DubboModule.addServiceSubPackageScan("com.alibaba.dubbo.config.guice.api");
+//        DubboModule.addExcludeServiceClass(DemoServiceSon.class);
         install(new DubboModule());
         bind(DemoService.class).to(DemoServiceImpl.class).asEagerSingleton();
         bind(DemoServiceSon.class).to(DemoServiceSonImpl.class).asEagerSingleton();
@@ -27,7 +27,7 @@ public class DubboTestModule extends AbstractModule {
     public static void main(String[] args) {
 
         Injector injector = Guice.createInjector(new DubboTestModule());
-        DubboConfigs configs = injector.getInstance(DubboConfigs.class);
+//        DubboConfigs configs = injector.getInstance(DubboConfigs.class);
         while (true) {
             try {
                 Thread.sleep(1L);
