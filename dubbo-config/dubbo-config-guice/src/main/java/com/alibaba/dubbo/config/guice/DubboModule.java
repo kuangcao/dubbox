@@ -256,45 +256,50 @@ public class DubboModule extends AbstractModule {
         URL packageURL;
         Set<String> names = new HashSet<String>();
         String packageName = packName.replace(".", "/");
-        packageURL = classLoader.getResource(packageName);
 
-        if (packageURL.getProtocol().equals("jar")) {
-            String jarFileName;
-            JarFile jf;
-            Enumeration<JarEntry> jarEntries;
-            String entryName;
+        Enumeration<URL> packageUrls = classLoader.getResources(packageName);
+        while (packageUrls.hasMoreElements()) {
+            packageURL = packageUrls.nextElement();
+            if (packageURL.getProtocol().equals("jar")) {
+                String jarFileName;
+                JarFile jf;
+                Enumeration<JarEntry> jarEntries;
+                String entryName;
 
-            // build jar file name, then loop through zipped entries
-            jarFileName = URLDecoder.decode(packageURL.getFile(), "UTF-8");
-            jarFileName = jarFileName.substring(5, jarFileName.indexOf("!"));
-            System.out.println(">" + jarFileName);
-            jf = new JarFile(jarFileName);
-            jarEntries = jf.entries();
-            while (jarEntries.hasMoreElements()) {
-                entryName = jarEntries.nextElement().getName();
-                if (entryName.startsWith(packageName) && entryName.length() > packageName.length() + 5) {
-
-                    if (entryName.lastIndexOf('.') != -1) {
-                        entryName = entryName.substring(0, entryName.lastIndexOf('.'));
+                // build jar file name, then loop through zipped entries
+                jarFileName = URLDecoder.decode(packageURL.getFile(), "UTF-8");
+                jarFileName = jarFileName.substring(5, jarFileName.indexOf("!"));
+                System.out.println(">" + jarFileName);
+                jf = new JarFile(jarFileName);
+                jarEntries = jf.entries();
+                while (jarEntries.hasMoreElements()) {
+                    entryName = jarEntries.nextElement().getName();
+                    if (entryName.startsWith(packageName) && entryName.length() > packageName.length() + 5) {
+                        if (entryName.lastIndexOf(".class") != -1) {
+                            entryName = entryName.substring(0, entryName.lastIndexOf('.'));
+                            names.add(entryName);
+                        }
                     }
-                    names.add(entryName);
                 }
-            }
 
-            // loop through files in classpath
-        } else {
-            URI uri = new URI(packageURL.toString());
-            File folder = new File(uri.getPath());
-            // won't work with path which contains blank (%20)
-            // File folder = new File(packageURL.getFile());
-            File[] contenuti = folder.listFiles();
-            String entryName;
-            for (File actual : contenuti) {
-                entryName = actual.getName();
-                if (entryName.lastIndexOf(".class") != -1) {
-                    entryName = packName + "." + entryName.substring(0, entryName.lastIndexOf(".class"));
+                // loop through files in classpath
+            } else {
+                URI uri = new URI(packageURL.toString());
+                File folder = new File(uri.getPath());
+                // won't work with path which contains blank (%20)
+                // File folder = new File(packageURL.getFile());
+                File[] contenuti = folder.listFiles();
+                String entryName;
+                for (File actual : contenuti) {
+                    if (actual.isDirectory()) {
+                        continue;
+                    }
+                    entryName = actual.getName();
+                    if (entryName.lastIndexOf(".class") != -1) {
+                        entryName = packName + "." + entryName.substring(0, entryName.lastIndexOf(".class"));
+                        names.add(entryName);
+                    }
                 }
-                names.add(entryName);
             }
         }
         return names;
