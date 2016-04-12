@@ -276,8 +276,11 @@ public class DubboModule extends AbstractModule {
                     entryName = jarEntries.nextElement().getName();
                     if (entryName.startsWith(packageName) && entryName.length() > packageName.length() + 5) {
                         if (entryName.lastIndexOf(".class") != -1) {
-                            entryName = entryName.substring(0, entryName.lastIndexOf('.'));
-                            names.add(entryName);
+                            entryName = entryName.substring(0, entryName.lastIndexOf('.')).replace('/', '.');
+                            // 不递归
+                            if (entryName.indexOf('.') == packName.indexOf('.') + 1) {
+                                names.add(entryName);
+                            }
                         }
                     }
                 }
