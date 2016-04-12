@@ -14,9 +14,9 @@ public class DubboClientModule extends AbstractModule {
     @Override
     protected void configure() {
 
-//        DubboModule.addReferenceSubPackageScan("com.alibaba.dubbo.config.guice.api", "1.0.0");
-//        DubboModule.addExcludeReferenceClass(Box.class);
-//        DubboModule.addExcludeReferenceClass(DemoServiceSon.class);
+        DubboModule.addReferenceSubPackageScan("com.alibaba.dubbo.config.guice.api", "1.0.0");
+        DubboModule.addExcludeReferenceClass(Box.class);
+        DubboModule.addExcludeReferenceClass(DemoServiceSon.class);
         install(new DubboModule());
 
     }
@@ -28,10 +28,10 @@ public class DubboClientModule extends AbstractModule {
         HelloService helloService = injector.getInstance(HelloService.class);
         while (true) {
             try {
+                Thread.sleep(1000L);
                 System.out.println(demoService.sayName("hello"));
                 System.out.println(helloService.sayHello("xiaoyage"));
-                Thread.sleep(1L);
-            } catch (InterruptedException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }

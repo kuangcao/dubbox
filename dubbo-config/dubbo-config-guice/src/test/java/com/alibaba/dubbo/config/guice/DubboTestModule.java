@@ -16,8 +16,8 @@ public class DubboTestModule extends AbstractModule {
     @Override
     protected void configure() {
 
-//        DubboModule.addServiceSubPackageScan("com.alibaba.dubbo.config.guice.api");
-//        DubboModule.addExcludeServiceClass(DemoServiceSon.class);
+        DubboModule.addServiceSubPackageScan("com.alibaba.dubbo.config.guice.api");
+        DubboModule.addExcludeServiceClass(DemoServiceSon.class);
         install(new DubboModule());
         bind(DemoService.class).to(DemoServiceImpl.class).asEagerSingleton();
         bind(DemoServiceSon.class).to(DemoServiceSonImpl.class).asEagerSingleton();
