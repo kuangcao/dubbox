@@ -278,7 +278,7 @@ public class DubboModule extends AbstractModule {
                         if (entryName.lastIndexOf(".class") != -1) {
                             entryName = entryName.substring(0, entryName.lastIndexOf('.')).replace('/', '.');
                             // 不递归
-                            if (entryName.indexOf('.') == packName.indexOf('.') + 1) {
+                            if (entryName.replace(packName,"").lastIndexOf('.') <= 0) {
                                 names.add(entryName);
                             }
                         }
